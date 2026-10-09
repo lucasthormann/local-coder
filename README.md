@@ -15,10 +15,11 @@ uv init
 source .venv/bin/activate
 uv add -r requirements.txt
 ```
-* Run the StreamLit app
+* Run the StreamLit app locally
 ```
 streamlit run coder.py
 ```
 
 #### Additional Information
 * The system begins building a GUI in Python by default. In order to generate different code you must alter the source file.
+* Most importantly, the system uses locally installed LLMs and will not function if you do not have the appropriate models downloaded
