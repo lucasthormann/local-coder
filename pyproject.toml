@@ -1,0 +1,26 @@
+[project]
+name = "local-coder"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Lucas Thormann", email = "LucasThormann2@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-core>=1.6.9",
+    "langchain-ollama>=1.1.0",
+    "langgraph>=1.2.14",
+    "pathlib>=1.0.1",
+    "streamlit>=1.65.0",
+    "tavily>=1.1.0",
+    "typing>=3.10.0.0",
+    "typing-extensions>=4.16.0",
+]
+
+[project.scripts]
+local-coder = "local_coder:main"
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
