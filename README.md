@@ -16,7 +16,10 @@ ollama pull ornith:9b
 ollama pull mistral:7b
 ollama pull dolphin3:8b
 ```
-
+* You also need a Tavily API key
+```
+https://www.tavily.com/
+```
 ### How To Run
 * Clone the repo
 ```
@@ -28,9 +31,34 @@ uv init
 source .venv/bin/activate
 uv add -r requirements.txt
 ```
+* Create a .env file & past in your API key using the following format
+```
+TAVILY_API_KEY="your_tavily_api_key"
+```
 * Run the StreamLit app locally
 ```
 streamlit run coder.py
+```
+
+## Run using Docker Compose
+* Create a .env file & past in your API key using the following format
+```
+TAVILY_API_KEY="your_tavily_api_key"
+```
+* Start both containers
+```
+docker compose up --build -d
+```
+* Download each model into Ollama once
+```
+docker compose exec ollama ollama pull llama3.1:8b
+docker compose exec ollama ollama pull ornith:9b
+docker compose exec ollama ollama pull mistral:7b
+docker compose exec ollama ollama pull dolphin3:8b
+```
+* Now access the app at the following link & refresh the page
+```
+http://localhost:8501
 ```
 
 #### Additional Information

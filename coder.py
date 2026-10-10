@@ -20,6 +20,8 @@ import time
 import os
 import re
 
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11435")
+
 # Fail early if the required Tavily API key is missing.
 # Set TAVILY_API_KEY in the environment; don't place the key directly in source code.
 tavily_api_key = os.getenv("TAVILY_API_KEY")
@@ -115,10 +117,10 @@ tool_node = ToolNode(tools)
 
 
 # Models
-researcher_model = ChatOllama(model="llama3.1:8b")
-coder_model = ChatOllama(model="ornith:9b")
-critic_model = ChatOllama(model="mistral:7b")
-supervisor_model = ChatOllama(model="dolphin3:8b", temperature=0)
+researcher_model = ChatOllama(model="llama3.1:8b", base_url=OLLAMA_URL)
+coder_model = ChatOllama(model="ornith:9b", base_url=OLLAMA_URL)
+critic_model = ChatOllama(model="mistral:7b", base_url=OLLAMA_URL)
+supervisor_model = ChatOllama(model="dolphin3:8b", temperature=0, base_url=OLLAMA_URL)
 
 
 researcher_with_tools = researcher_model.bind_tools(tools)
