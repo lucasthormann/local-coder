@@ -1,18 +1,24 @@
-import os
-import re
-import subprocess
-from pathlib import Path
 from typing import Annotated
+from typing_extensions import TypedDict
 
-import streamlit as st
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+)
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from tavily import TavilyClient
-from typing_extensions import TypedDict
+from pathlib import Path
+import streamlit as st
+import subprocess
+import time
+import os
+import re
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11435")
 
@@ -35,11 +41,10 @@ if "messages" not in st.session_state:
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = "default"
 
-# Display chat history
+# Display chat history 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-
 
 # State
 class AgentState(TypedDict):
@@ -50,7 +55,7 @@ class AgentState(TypedDict):
 # Placeholder tools — replace these with real implementations.
 @tool
 def search_web(query: str) -> str:
-    """Use the latest query to search the web."""
+    """Uses last query to search the web."""
     result = client.search(
         query,
         search_depth="advanced",
@@ -58,7 +63,6 @@ def search_web(query: str) -> str:
         max_results=5,
     )
     return str(result)
-
 
 @tool
 def write_text_file(path: str, content: str) -> str:
@@ -68,37 +72,22 @@ def write_text_file(path: str, content: str) -> str:
     file_path.write_text(content, encoding="utf-8")
     return f"Wrote {file_path}"
 
-
 @tool
 def python_executor(code: str) -> str:
     """Run Python code in a disposable, resource-limited Docker container."""
     command = [
-        "docker",
-        "run",
-        "--rm",
-        "-i",
-        "--network",
-        "none",
-        "--memory",
-        "128m",
-        "--cpus",
-        "0.5",
-        "--pids-limit",
-        "64",
+        "docker", "run", "--rm", "-i",
+        "--network", "none",
+        "--memory", "128m",
+        "--cpus", "0.5",
+        "--pids-limit", "64",
         "--read-only",
-        "--tmpfs",
-        "/tmp:rw,noexec,nosuid,size=16m",
-        "--cap-drop",
-        "ALL",
-        "--security-opt",
-        "no-new-privileges",
-        "--user",
-        "65534:65534",
+        "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m",
+        "--cap-drop", "ALL",
+        "--security-opt", "no-new-privileges",
+        "--user", "65534:65534",
         "python:3.12-alpine",
-        "python",
-        "-I",
-        "-c",
-        code,
+        "python", "-I", "-c", code,
     ]
 
     try:
@@ -131,27 +120,23 @@ tool_node = ToolNode(tools)
 researcher_model = ChatOllama(model="llama3.1:8b", base_url=OLLAMA_URL)
 coder_model = ChatOllama(model="ornith:9b", base_url=OLLAMA_URL)
 critic_model = ChatOllama(model="mistral:7b", base_url=OLLAMA_URL)
-supervisor_model = ChatOllama(
-    model="dolphin3:8b",
-    temperature=0,
-    base_url=OLLAMA_URL,
-)
+supervisor_model = ChatOllama(model="dolphin3:8b", temperature=0, base_url=OLLAMA_URL)
+
 
 researcher_with_tools = researcher_model.bind_tools(tools)
-# coder_with_tools = coder_model.bind_tools(tools)
-# critic_with_tools = critic_model.bind_tools(tools)
-
+#coder_with_tools = coder_model.bind_tools(tools)
+#critic_with_tools = critic_model.bind_tools(tools)
 
 # Workers
 def run_worker(model, role_prompt: str, state: AgentState, name: str):
     orig = state["messages"][-2].content.split()
-    res = " ".join(orig)
-
+    res = " ".join(orig)    
+    
     response = model.invoke(
         [SystemMessage(content=role_prompt), str(res)]
     )
 
-    print(f"Fed to {model}: {res}\n")
+    print(f"Fed to {model}: " + str(res) + "\n")
 
     # Preserve tool_calls on the original AIMessage so ToolNode can use them.
     response.name = name
@@ -161,10 +146,7 @@ def run_worker(model, role_prompt: str, state: AgentState, name: str):
 def researcher(state: AgentState):
     return run_worker(
         researcher_with_tools,
-        (
-            "You are an expert researcher. Do not write code. Gather information "
-            "using tools and report findings. Recommend the Critic as the next agent."
-        ),
+        "You are an expert researcher. Do not write code. Gather information using tools and report findings. Recommend the Critic as the next agent.",
         state,
         "Researcher",
     )
@@ -173,10 +155,7 @@ def researcher(state: AgentState):
 def coder(state: AgentState):
     return run_worker(
         coder_model,
-        (
-            "You are an expert Python developer. Write clean code using the "
-            "information you're given."
-        ),
+        "You are an expert Python developer. Write clean code using the information you're given.",
         state,
         "Coder",
     )
@@ -185,11 +164,7 @@ def coder(state: AgentState):
 def critic(state: AgentState):
     return run_worker(
         critic_model,
-        (
-            "Evaluate the text for useful information that the Coder can use. "
-            "Provide step-by-step instructions for the Coder. Do not code. "
-            "Recommend the Coder as the next agent."
-        ),
+        "Evaluate the text for useful information that the Coder can use. Provide step by step instructions for the Coder. Do not code. Recommend the Coder as the next agent.",
         state,
         "Critic",
     )
@@ -202,7 +177,7 @@ valid_routes = {"FINISH", *members}
 SUPERVISOR_PROMPT = f"""
 You are a supervisor managing a team: {','.join(members)}.
 Route tasks appropriately by responding with a team member name.
-When satisfied, respond FINISH. Respond with a single item from
+When satisfied, respond FINISH. Respond with a single item from 
 the team list at a time.
 """
 
@@ -210,29 +185,25 @@ the team list at a time.
 def supervisor_node(state: AgentState):
     orig = state["messages"][-1].content.split()
     res = " ".join(orig)
-
+    
     response = supervisor_model.invoke(
         [SystemMessage(content=SUPERVISOR_PROMPT), str(res)]
     )
-
-    print(f"Fed to {supervisor_model}: {res}\n")
+    
+    print(f"Fed to {supervisor_model}: " + str(res) + "\n")
 
     valid_choices = {"Researcher", "Coder", "Critic"}
     content = getattr(response, "content", "") if response else ""
 
     matches = re.findall(r"\b(?:Researcher|Coder|Critic)\b", content)
-    choice = (
-        matches[0]
-        if len(matches) == 1 and matches[0] in valid_choices
-        else "FINISH"
-    )
-
+    choice = matches[0] if len(matches) == 1 and matches[0] in valid_choices else "FINISH"
     return {
         "messages": [
             AIMessage(content=f"## Routing to {choice}.", name="Supervisor")
         ],
         "next": choice,
     }
+
 
 
 # Routing after the supervisor chooses a destination.
@@ -288,19 +259,17 @@ app = graph.compile()
 
 # Run
 # User input
-# if prompt := st.chat_input(
-#     "Build a simple GUI program in Python. Begin by researching GUI development in Python."
-# ):
-#     # Add user message
-#     st.session_state.messages.append({"role": "user", "content": prompt})
-#
-# with st.chat_message("user"):
-#     st.markdown(prompt)
+#if prompt := st.chat_input("Build a simple GUI program in Python. Begin by researching GUI development in Python."):
+    # Add user message
+#    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+#with st.chat_message("user"):
+#    st.markdown(prompt)
 
 inputs = {
     "messages": [
         HumanMessage(
-            content="Build a GUI using Python. Begin by researching the topic."
+            content=f"Build a GUI using Python. Begin by researching the topic."
         )
     ],
     "next": "",
@@ -317,14 +286,10 @@ with st.chat_message("assistant"):
         for node, state_update in update.items():
             last_msg = state_update.get("messages", [])
             if last_msg:
-                print(f"{node}: {last_msg[-1].content}")
+                print(f"{node}: {state_update['messages'][-1].content}")
                 full_response += "\n"
                 full_response += last_msg[-1].content
                 full_response += "\n"
                 response_placeholder.markdown(full_response)
-
 # Store assistant response
-st.session_state.messages.append(
-    {"role": "assistant", "content": full_response}
-)
-
+st.session_state.messages.append({"role": "assistant", "content": full_response})
