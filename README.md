@@ -4,6 +4,19 @@
 ## Target Environment:
 * A modern PC (x86_64) running a Debian-like instance
 
+## Dependencies
+* You need Ollama installed on your system
+```
+curl -fsSL https://ollama.com/install.sh | sh
+```
+* Install the necessary models
+```
+ollama pull llama3.1:8b
+ollama pull ornith:9b
+ollama pull mistral:7b
+ollama pull dolphin3:8b
+```
+
 ### How To Run
 * Clone the repo
 ```
@@ -22,4 +35,4 @@ streamlit run coder.py
 
 #### Additional Information
 * The system begins building a GUI in Python by default. In order to generate different code you must alter the source file.
-* Most importantly, the system uses locally installed LLMs and will not function if you do not have the appropriate models downloaded
+* Most importantly, the system uses locally installed LLMs and will not function if you do not have the appropriate models downloaded.
